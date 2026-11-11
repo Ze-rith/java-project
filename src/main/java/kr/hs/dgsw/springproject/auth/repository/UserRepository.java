@@ -1,4 +1,7 @@
 package kr.hs.dgsw.springproject.auth.repository;
 
-public interface UserRepository {
+import kr.hs.dgsw.springproject.auth.domain.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface UserRepository extends JpaRepository<User, Long> {
 }
