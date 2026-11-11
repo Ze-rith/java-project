@@ -1,0 +1,16 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:askode
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: create
+    show-sql: true
+    defer-datasource-initialization: true
+  sql:
+    init:
+      mode: always
