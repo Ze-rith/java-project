@@ -1,8 +1,8 @@
-package kr.hs.dgsw.springproject.question.domain;
+package kr.hs.dgsw.springproject.domain.question.domain;
 
 import jakarta.persistence.*;
-import kr.hs.dgsw.springproject.answer.domain.Answer;
-import kr.hs.dgsw.springproject.auth.domain.User;
+import kr.hs.dgsw.springproject.domain.answer.domain.Answer;
+import kr.hs.dgsw.springproject.domain.user.domain.User;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
