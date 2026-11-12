@@ -1,6 +1,6 @@
-package kr.hs.dgsw.springproject.auth.service;
+package kr.hs.dgsw.springproject.domain.user.service;
 
-import kr.hs.dgsw.springproject.auth.domain.User;
+import kr.hs.dgsw.springproject.domain.user.domain.User;
 
 public interface UserService {
     User findById(Long id);

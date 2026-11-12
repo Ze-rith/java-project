@@ -1,4 +1,4 @@
-package kr.hs.dgsw.springproject.auth.domain;
+package kr.hs.dgsw.springproject.domain.user.domain;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
