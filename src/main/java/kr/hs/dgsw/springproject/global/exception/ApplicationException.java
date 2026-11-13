@@ -1,6 +1,6 @@
 package kr.hs.dgsw.springproject.global.exception;
 
-import ChickenMayoDeopbab.bada.global.exception.statuscode.StatusCode;
+import kr.hs.dgsw.springproject.global.exception.statuscode.StatusCode;
 import lombok.Getter;
 
 @Getter
