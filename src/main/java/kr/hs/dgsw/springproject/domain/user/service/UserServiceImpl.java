@@ -2,18 +2,22 @@ package kr.hs.dgsw.springproject.domain.user.service;
 
 import kr.hs.dgsw.springproject.domain.user.domain.User;
 import kr.hs.dgsw.springproject.domain.user.dto.request.CreateUserRequest;
+import kr.hs.dgsw.springproject.domain.user.dto.request.UpdateUserRequest;
 import kr.hs.dgsw.springproject.domain.user.exception.UserStatusCode;
 import kr.hs.dgsw.springproject.domain.user.repository.UserRepository;
 import kr.hs.dgsw.springproject.global.exception.ApplicationException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Transactional(rollbackFor = Exception.class)
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
 
     @Override
+    @Transactional(readOnly = true)
     public User findById(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ApplicationException(UserStatusCode.USER_NOT_FOUND));
@@ -25,21 +29,30 @@ public class UserServiceImpl implements UserService {
 
         return userRepository.save(
                 User.builder()
-                .name(request.name())
-                .email(request.email())
-                .password(request.password())
-                .build()
+                        .name(request.name())
+                        .email(request.email())
+                        .password(request.password())
+                        .build()
         );
     }
 
     @Override
-    public User update(Long id, User user) {
-        return null;
+    public User update(Long id, UpdateUserRequest request) {
+        validateUser(request.email());
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ApplicationException(UserStatusCode.USER_NOT_FOUND));
+        user.update(request.email(), request.name());
+
+        return user;
     }
 
     @Override
     public Boolean delete(Long id) {
-        return null;
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ApplicationException(UserStatusCode.USER_NOT_FOUND));
+        userRepository.delete(user);
+
+        return true;
     }
 
     private void validateUser(String email) {
