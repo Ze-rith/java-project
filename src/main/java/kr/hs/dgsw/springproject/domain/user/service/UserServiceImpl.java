@@ -1,6 +1,8 @@
 package kr.hs.dgsw.springproject.domain.user.service;
 
 import kr.hs.dgsw.springproject.domain.auth.service.EmailService;
+import kr.hs.dgsw.springproject.domain.answer.repository.AnswerRepository;
+import kr.hs.dgsw.springproject.domain.question.repository.QuestionRepository;
 import kr.hs.dgsw.springproject.domain.user.domain.User;
 import kr.hs.dgsw.springproject.domain.user.dto.request.CreateUserRequest;
 import kr.hs.dgsw.springproject.domain.user.dto.request.UpdateUserRequest;
@@ -17,6 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private final AnswerRepository answerRepository;
+    private final QuestionRepository questionRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -53,6 +57,10 @@ public class UserServiceImpl implements UserService {
     public Boolean delete(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ApplicationException(UserStatusCode.USER_NOT_FOUND));
+
+        answerRepository.deleteAllByUser_Id(id);
+        answerRepository.deleteAllByQuestion_User_Id(id);
+        questionRepository.deleteAllByUser_Id(id);
         userRepository.delete(user);
 
         return true;
