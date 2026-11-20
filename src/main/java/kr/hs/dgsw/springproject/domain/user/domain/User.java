@@ -2,6 +2,7 @@ package kr.hs.dgsw.springproject.domain.user.domain;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -23,6 +24,7 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    @Builder
     public User(String email, String name, String password) {
         this.email = email;
         this.name = name;

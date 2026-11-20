@@ -1,11 +1,10 @@
 package kr.hs.dgsw.springproject.global.exception.handler;
 
-import ChickenMayoDeopbab.bada.domain.file.exception.FileStatusCode;
-import ChickenMayoDeopbab.bada.global.common.ApiResponse;
-import ChickenMayoDeopbab.bada.global.exception.ApplicationException;
-import ChickenMayoDeopbab.bada.global.exception.statuscode.CommonStatusCode;
-import ChickenMayoDeopbab.bada.global.exception.statuscode.StatusCode;
 import jakarta.validation.ConstraintViolationException;
+import kr.hs.dgsw.springproject.global.common.ApiResponse;
+import kr.hs.dgsw.springproject.global.exception.ApplicationException;
+import kr.hs.dgsw.springproject.global.exception.statuscode.CommonStatusCode;
+import kr.hs.dgsw.springproject.global.exception.statuscode.StatusCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -14,37 +13,15 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
-import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-
-    private static final Set<String> CLIENT_ABORT_MESSAGES = Set.of(
-            "Broken pipe",
-            "Connection reset",
-            "Connection reset by peer",
-            "An established connection was aborted"
-    );
-
-    private boolean isClientAbort(Throwable ex) {
-        for (Throwable t = ex; t != null; t = t.getCause()) {
-            if (t instanceof IOException && t.getMessage() != null) {
-                String message = t.getMessage();
-                if (CLIENT_ABORT_MESSAGES.stream().anyMatch(message::contains)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
 
     @ExceptionHandler(ApplicationException.class)
     public ResponseEntity<ApiResponse<Void>> handleApplicationException(ApplicationException ex) {
@@ -85,11 +62,6 @@ public class GlobalExceptionHandler {
         return CommonStatusCode.INVALID_ARGUMENT.toEntity("필수 파일이 누락되었습니다: " + ex.getRequestPartName());
     }
 
-    @ExceptionHandler(MaxUploadSizeExceededException.class)
-    public ResponseEntity<ApiResponse<Void>> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException ex) {
-        return FileStatusCode.UPLOAD_TOO_LARGE.toEntity();
-    }
-
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiResponse<Void>> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException ex) {
         return CommonStatusCode.INVALID_ARGUMENT.toEntity("파라미터 타입이 잘못되었습니다: " + ex.getName());
@@ -104,25 +76,5 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleNoResourceFoundException(NoResourceFoundException ex) {
         return CommonStatusCode.UNKNOWN_ENDPOINT.toEntity();
-    }
-
-    @ExceptionHandler(IOException.class)
-    public ResponseEntity<ApiResponse<Void>> handleIOException(IOException ex) {
-        if (isClientAbort(ex)) {
-            log.debug("클라이언트 연결이 끊겼습니다: {}", ex.getMessage());
-            return null;
-        }
-        log.error("IO 처리 중 에러가 발생했습니다.", ex);
-        return CommonStatusCode.INTERNAL_SERVER_ERROR.toEntity();
-    }
-
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Void>> handleException(Exception ex) {
-        if (isClientAbort(ex)) {
-            log.debug("클라이언트 연결이 끊겼습니다.: {}", ex.getMessage());
-            return null;
-        }
-        log.error("요청 처리 중 에러가 발생했습니다.", ex);
-        return CommonStatusCode.INTERNAL_SERVER_ERROR.toEntity();
     }
 }
