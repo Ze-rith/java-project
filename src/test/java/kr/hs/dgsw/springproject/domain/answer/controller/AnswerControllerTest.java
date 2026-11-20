@@ -16,6 +16,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -47,6 +48,20 @@ class AnswerControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value(201))
                 .andExpect(jsonPath("$.data.content").value("답변 내용"));
+    }
+
+    @Test
+    @DisplayName("답변 내용이 비어 있으면 400을 반환한다")
+    void createAnswer_withBlankContent_returns400() throws Exception {
+        mockMvc.perform(post("/questions/1/answers")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"content":"","userId":2}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+
+        verifyNoInteractions(answerService);
     }
 
     @Test
