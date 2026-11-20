@@ -2,6 +2,10 @@ package kr.hs.dgsw.springproject.domain.user.service;
 
 import jakarta.persistence.EntityManager;
 import kr.hs.dgsw.springproject.domain.auth.service.EmailService;
+import kr.hs.dgsw.springproject.domain.answer.domain.Answer;
+import kr.hs.dgsw.springproject.domain.answer.repository.AnswerRepository;
+import kr.hs.dgsw.springproject.domain.question.domain.Question;
+import kr.hs.dgsw.springproject.domain.question.repository.QuestionRepository;
 import kr.hs.dgsw.springproject.domain.user.domain.User;
 import kr.hs.dgsw.springproject.domain.user.dto.request.CreateUserRequest;
 import kr.hs.dgsw.springproject.domain.user.dto.request.UpdateUserRequest;
@@ -29,6 +33,12 @@ class UserServiceIntegrationTest {
     private UserRepository userRepository;
 
     @Autowired
+    private AnswerRepository answerRepository;
+
+    @Autowired
+    private QuestionRepository questionRepository;
+
+    @Autowired
     private EntityManager entityManager;
 
     private EmailService emailService;
@@ -37,7 +47,7 @@ class UserServiceIntegrationTest {
     @BeforeEach
     void setUp() {
         emailService = mock(EmailService.class);
-        userService = new UserServiceImpl(userRepository, emailService);
+        userService = new UserServiceImpl(userRepository, emailService, answerRepository, questionRepository);
     }
 
     @Test
@@ -133,5 +143,47 @@ class UserServiceIntegrationTest {
         entityManager.clear();
 
         assertThat(userRepository.findById(saved.getId())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("회원 삭제 시 작성한 질문과 답변도 삭제한다")
+    void delete_removesUserQuestionsAndAnswers() {
+        long questionCountBefore = questionRepository.count();
+        long answerCountBefore = answerRepository.count();
+        User userToDelete = userRepository.saveAndFlush(User.builder()
+                .name("삭제할 사용자")
+                .email("delete@example.com")
+                .password("password")
+                .build());
+        User otherUser = userRepository.saveAndFlush(User.builder()
+                .name("다른 사용자")
+                .email("other@example.com")
+                .password("password")
+                .build());
+
+        Question ownedQuestion = questionRepository.saveAndFlush(
+                new Question("내 질문", "질문 내용", userToDelete));
+        Question otherQuestion = questionRepository.saveAndFlush(
+                new Question("다른 질문", "질문 내용", otherUser));
+        answerRepository.saveAndFlush(new Answer("내 답변", otherQuestion, userToDelete));
+        answerRepository.saveAndFlush(new Answer("다른 사람의 답변", ownedQuestion, otherUser));
+        Long userId = userToDelete.getId();
+        Long otherUserId = otherUser.getId();
+
+        assertThat(userService.delete(userId)).isTrue();
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(userRepository.findById(userId)).isEmpty();
+        assertThat(questionRepository.count()).isEqualTo(questionCountBefore + 1);
+        assertThat(questionRepository.findAll())
+                .noneMatch(question -> question.getUser().getId().equals(userId));
+        assertThat(answerRepository.count()).isEqualTo(answerCountBefore);
+        assertThat(answerRepository.findAll())
+                .noneMatch(answer -> answer.getUser().getId().equals(userId)
+                        || answer.getQuestion().getUser().getId().equals(userId));
+        assertThat(questionRepository.findAll())
+                .anyMatch(question -> question.getUser().getId().equals(otherUserId)
+                        && question.getTitle().equals("다른 질문"));
     }
 }

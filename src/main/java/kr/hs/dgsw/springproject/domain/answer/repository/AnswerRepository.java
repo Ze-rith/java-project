@@ -7,8 +7,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface AnswerRepository extends JpaRepository<Answer, Long> {
-
+    void deleteAllByUser_Id(Long userId);
+    void deleteAllByQuestion_User_Id(Long userId);
     List<Answer> findAllByQuestionIdOrderByIdAsc(Long questionId);
-
     Optional<Answer> findByQuestionIdAndAcceptedTrue(Long questionId);
 }
