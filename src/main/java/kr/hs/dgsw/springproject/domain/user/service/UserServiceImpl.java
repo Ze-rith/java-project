@@ -1,5 +1,6 @@
 package kr.hs.dgsw.springproject.domain.user.service;
 
+import kr.hs.dgsw.springproject.domain.auth.service.EmailService;
 import kr.hs.dgsw.springproject.domain.user.domain.User;
 import kr.hs.dgsw.springproject.domain.user.dto.request.CreateUserRequest;
 import kr.hs.dgsw.springproject.domain.user.dto.request.UpdateUserRequest;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
+    private final EmailService emailService;
 
     @Override
     @Transactional(readOnly = true)
@@ -26,6 +28,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public User create(CreateUserRequest request) {
         validateUser(request.email());
+        emailService.consumeVerifiedEmail(request.email());
 
         return userRepository.save(
                 User.builder()

@@ -1,8 +1,13 @@
 spring:
-  datasource:
-    url: jdbc:h2:mem:askode
-    username: sa
-    password:
+  mail:
+    host: ${SMTP_HOST:smtp.gmail.com}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
   h2:
     console:
       enabled: true
