@@ -1,13 +1,14 @@
 package kr.hs.dgsw.springproject.domain.auth.service;
 
 import jakarta.mail.internet.MimeMessage;
+import kr.hs.dgsw.springproject.domain.auth.domain.EmailVerification;
 import kr.hs.dgsw.springproject.domain.auth.exception.AuthStatusCode;
+import kr.hs.dgsw.springproject.domain.auth.repository.EmailVerificationRepository;
 import kr.hs.dgsw.springproject.domain.user.exception.UserStatusCode;
 import kr.hs.dgsw.springproject.domain.user.repository.UserRepository;
 import kr.hs.dgsw.springproject.global.exception.ApplicationException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -15,19 +16,16 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 import java.security.SecureRandom;
+import java.time.LocalDateTime;
 import java.util.Locale;
-import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
 public class EmailServiceImpl implements EmailService {
-    private static final String CODE_KEY_PREFIX = "email:verification:";
-    private static final String RESEND_KEY_PREFIX = "email:verification:resend:";
-    private static final String VERIFIED = "ACCESS";
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final JavaMailSender javaMailSender;
-    private final RedisTemplate<String, String> redisTemplate;
+    private final EmailVerificationRepository emailVerificationRepository;
     private final TemplateEngine templateEngine;
     private final UserRepository userRepository;
 
@@ -40,11 +38,12 @@ public class EmailServiceImpl implements EmailService {
             throw new ApplicationException(UserStatusCode.EMAIL_ALREADY_EXISTS);
         }
 
-        String codeKey = codeKey(email);
-        String resendKey = RESEND_KEY_PREFIX + email;
-        if (Boolean.TRUE.equals(redisTemplate.hasKey(resendKey))) {
-            throw new ApplicationException(AuthStatusCode.EMAIL_VERIFICATION_RESEND_TOO_SOON);
-        }
+        LocalDateTime now = LocalDateTime.now();
+        emailVerificationRepository.findById(email)
+                .filter(verification -> verification.isResendTooSoon(now))
+                .ifPresent(verification -> {
+                    throw new ApplicationException(AuthStatusCode.EMAIL_VERIFICATION_RESEND_TOO_SOON);
+                });
 
         String code = String.format(Locale.ROOT, "%06d", SECURE_RANDOM.nextInt(1_000_000));
         Context context = new Context(Locale.KOREAN);
@@ -52,33 +51,34 @@ public class EmailServiceImpl implements EmailService {
         String content = templateEngine.process("EmailAuth", context);
 
         sendEmail(email, "이메일 인증 코드", content);
-        redisTemplate.opsForValue().set(codeKey, code, 5, TimeUnit.MINUTES);
-        redisTemplate.opsForValue().set(resendKey, "sent", 1, TimeUnit.MINUTES);
+        emailVerificationRepository.save(EmailVerification.issue(email, code, now));
     }
 
     @Override
     public void verifyCode(String email, String authNum) {
-        String key = codeKey(email);
-        String savedCode = redisTemplate.opsForValue().get(key);
+        EmailVerification verification = emailVerificationRepository.findById(email)
+                .orElseThrow(() -> new ApplicationException(AuthStatusCode.EMAIL_VERIFICATION_CODE_NOT_FOUND));
 
-        if (savedCode == null) {
-            throw new ApplicationException(AuthStatusCode.EMAIL_VERIFICATION_CODE_NOT_FOUND);
+        LocalDateTime now = LocalDateTime.now();
+        if (verification.isExpired(now)) {
+            throw new ApplicationException(AuthStatusCode.EMAIL_VERIFICATION_CODE_EXPIRED);
         }
-        if (!savedCode.equals(authNum)) {
+        if (!verification.matches(authNum)) {
             throw new ApplicationException(AuthStatusCode.EMAIL_VERIFICATION_CODE_INVALID);
         }
 
-        redisTemplate.opsForValue().set(key, VERIFIED, 10, TimeUnit.MINUTES);
+        verification.verify(now);
+        emailVerificationRepository.save(verification);
     }
 
     @Override
     public void consumeVerifiedEmail(String email) {
-        String key = codeKey(email);
-        String value = redisTemplate.opsForValue().get(key);
-        if (!VERIFIED.equals(value)) {
-            throw new ApplicationException(AuthStatusCode.EMAIL_NOT_VERIFIED);
-        }
-        redisTemplate.delete(key);
+        LocalDateTime now = LocalDateTime.now();
+        EmailVerification verification = emailVerificationRepository.findById(email)
+                .filter(found -> found.isUsableForSignUp(now))
+                .orElseThrow(() -> new ApplicationException(AuthStatusCode.EMAIL_NOT_VERIFIED));
+
+        emailVerificationRepository.delete(verification);
     }
 
     private void sendEmail(String to, String subject, String htmlContent) {
@@ -95,9 +95,5 @@ public class EmailServiceImpl implements EmailService {
         } catch (Exception exception) {
             throw new IllegalStateException("이메일 발송에 실패했습니다.", exception);
         }
-    }
-
-    private String codeKey(String email) {
-        return CODE_KEY_PREFIX + email;
     }
 }
