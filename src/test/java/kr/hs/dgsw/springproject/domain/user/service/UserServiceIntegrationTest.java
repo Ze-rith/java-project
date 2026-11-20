@@ -148,6 +148,8 @@ class UserServiceIntegrationTest {
     @Test
     @DisplayName("회원 삭제 시 작성한 질문과 답변도 삭제한다")
     void delete_removesUserQuestionsAndAnswers() {
+        long questionCountBefore = questionRepository.count();
+        long answerCountBefore = answerRepository.count();
         User userToDelete = userRepository.saveAndFlush(User.builder()
                 .name("삭제할 사용자")
                 .email("delete@example.com")
@@ -173,13 +175,15 @@ class UserServiceIntegrationTest {
         entityManager.clear();
 
         assertThat(userRepository.findById(userId)).isEmpty();
+        assertThat(questionRepository.count()).isEqualTo(questionCountBefore + 1);
         assertThat(questionRepository.findAll())
-                .extracting(Question::getUser)
-                .extracting(User::getId)
-                .containsExactly(otherUserId);
+                .noneMatch(question -> question.getUser().getId().equals(userId));
+        assertThat(answerRepository.count()).isEqualTo(answerCountBefore);
         assertThat(answerRepository.findAll())
-                .extracting(Answer::getUser)
-                .extracting(User::getId)
-                .isEmpty();
+                .noneMatch(answer -> answer.getUser().getId().equals(userId)
+                        || answer.getQuestion().getUser().getId().equals(userId));
+        assertThat(questionRepository.findAll())
+                .anyMatch(question -> question.getUser().getId().equals(otherUserId)
+                        && question.getTitle().equals("다른 질문"));
     }
 }

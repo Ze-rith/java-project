@@ -1,10 +1,10 @@
 package kr.hs.dgsw.springproject.global.exception.handler;
 
-import jakarta.validation.ConstraintViolationException;
 import kr.hs.dgsw.springproject.global.common.ApiResponse;
 import kr.hs.dgsw.springproject.global.exception.ApplicationException;
 import kr.hs.dgsw.springproject.global.exception.statuscode.CommonStatusCode;
 import kr.hs.dgsw.springproject.global.exception.statuscode.StatusCode;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
